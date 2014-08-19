@@ -1,0 +1,134 @@
+\documentclass[11pt]{article}
+\begin{document}
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation of multi fly classifier's performance on non-training videos. Minimum to maximum range of scores shown for each.} 
+\label{multiflyGT}
+\begin{tabular}{lccc}
+	\hline
+	Algorithms  &  Accuracy  &  Specificity &  Sensitivity  \\ 
+	\hline
+	TABU  & $0.823-0.994$ & $0.884-0.995$ & $0.747-0.994$ \\
+	JAABA & $0.986-0.995$ & $0.989-0.996$ & $0.982-0.994$ \\
+	GradientBoost & $0.981-0.990$ & $0.977-0.987$ & $0.979-0.993$ \\
+	Logistic & $0.983-0.993$ & $0.977-0.990$ & $0.979-0.992$ \\
+	lSVM & $0.983-0.992$ & $0.976-0.987$ & $0.978-0.998$ \\
+	gSVM & $0.984-0.993$ & $0.984-0.993$ & $0.975-0.992$ \\
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+Performance of multi-fly classifiers is evaluated on 4000 randomly picked frames from each non-training video. 
+
+
+\begin{table}[ht]
+\centering
+\caption{Performance measures of sex classifier on 3-fold cross validation.} 
+
+\label{sexCV}
+\begin{tabular}{lccccc}
+	\hline
+	Algorithms & Accuracy  & Sensitivity & Specificity & Precision & AUC \\
+	\hline
+	blobColor &$0.939 $ &$0.904 $ &$0.975 $ &$0.997  $&-\\
+	JAABA &$ 0.883 $   & $0.913 $ & $0.852 $& $0.860 $    &    -    \\
+	GradientBoost      & $0.882$   & $0.893 $ & $0.871 $      & $0.874 (5)$    & $0.953 $ \\
+	Logistic & $0.893$   & $0.867$     & $0.919$      & $0.915$    & $0.952$ \\
+	lSVM         & $0.816$   & $0.906$      & $0.727$     & $0.769$    & $0.949$ \\ 
+	gSVM        & $0.731$   & $0.827$      & $0.635$      & $0.695$    & $0.884$ \\ 
+	blobColor+JAABA      & $0.967$   & $0.947$      & $0.987$      & $0.986$    & -\\ 
+
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+Training data of sex classifiers is  4000 frames from original video (same video that we train multi -fly and chase). 
+
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation of sex classifier's performance on non-training videos. } 
+
+\label{sexGT}
+\begin{tabular}{lccc}
+	\hline
+	Algorithms  &  Accuracy   &  Sensitivity  &  Specificity \\ 
+	\hline
+	JAABA  & $0.919$ & $0.941 $ & $0.877 $ \\
+	GradientBoost& $0.925$ & $0.942 $ & $0.895 $  \\
+	 Logistic& $0.872$ & $ 0.940$ & $0.779 $  \\	
+	 lSVM& $0.957$ & $ 0.932$ & $ 0.981$  \\
+	 gSVM& $0.854$ & $ 0.848$ & $0.859 $  \\
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+Performance of sex classifiers is evaluated on 4000 randomly picked frames from each non-training video. 
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation of chase classifier's  performance on 3-fold cross validation} 
+\label{chaseCV}
+\begin{tabular}{lccccc}
+	\hline
+	Algorithms & Accuracy  & Sensitivity & Specificity & Precision & AUC \\
+	\hline
+	JAABA &$0.887 $ &$0.920 $ &$0.867 $ &$0.809  $&-\\
+	GradientBoost &$ 0.884 $   & $0.919 $ & $0.827 $& $0.896 $    &  $  0.917 $   \\
+	Logistic & $0.859$   & $0.913$     & $0.770$      & $0.866$    & $0.888$ \\
+	lSVM         & $0.844$   & $0.813$      & $0.895$     & $0.927$    & $0.861$ \\ 
+	gSVM        & $0.781$   & $0.696$      & $0.919$      & $0.933$    & $0.885$ \\ 
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+Training data of chase classifiers is  2000 frames from original video (same video that we train multi -fly and sex). 
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation of chase classifier's performance on non-training videos.}
+
+\label{chaseGT}
+\begin{tabular}{lccc}
+	\hline
+	Algorithms  &  Accuracy   &  Sensitivity  &  Specificity \\ 
+	\hline
+	JAABA  & $0.826$ & $0.949 $ & $0.764$ \\
+	GradientBoost& $0.801$ & $0.989 $ & $0.750$  \\
+	 Logistic& $0.871$ & $ 0.987$ & $0.766 $  \\	
+	 lSVM& $0.880$ & $ 0.915$ & $ 0.839$  \\
+	 gSVM& $0.762$ & $ 0.932$ & $0.668 $  \\
+	\hline
+	
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+Performance of chase classifiers is evaluated on 500 randomly picked frames from each non-training video. 
+
+\begin{table}[ht]
+\centering
+\caption{fly profiles on non training videos}
+
+\label{flyProfiles}
+\begin{tabular}{lccccc}
+	\hline
+	video profiles  &  v1   &  v2  &  v3  &v4 &v5\\ 
+	\hline
+	multi-fly\%  & $32.61$ & $28.09 $ & $17.23$  &$15.43$&$22.46$\\
+	female\%& $51.34$ & $63.54 $ & $24.28$ &$22.75$&$44.72$ \\
+	 male chase male\%& $0.29$ & $ 0.987$ & $1.45 $ &$1.40$ &$1.73$\\	
+	 male chase female\%& $0.66$ & $ 0.915$ & $ 0.73$  &$0.82$&$1.65$\\
+	\hline
+	
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+
+
+\end{document}
