@@ -1,0 +1,258 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage{lineno}
+
+\linenumbers
+\modulolinenumbers[2]
+
+\usepackage{mathpazo}
+\usepackage{verbatim}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage[usenames,dvipsnames]{color}
+\newcommand{\red}[1]{\textcolor{red}{#1}}
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\green}[1]{\textcolor{green}{#1}}
+\newcommand{\seagreen}[1]{\textcolor{SeaGreen}{#1}}
+\newcommand{\purple}[1]{\textcolor{Purple}{#1}}
+\newcommand{\ignore}[1]{}
+\usepackage{cite}
+\usepackage{subfig}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{caption}
+
+\usepackage{multirow}
+
+\usepackage{enumerate}
+\usepackage{setspace}
+%\doublespacing
+%opening
+\begin{document}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{20pt}
+
+
+%\title{xxx}
+
+\title{Trajectory scoring using JAABA in a noisy system}
+
+\author{H. Chen$\dagger$, B.Foley$\dagger$, P. Marjoram}
+
+
+
+\maketitle
+
+
+\noindent{{\em $\dagger$  these authors contributed equally to this work.}\\
+Corresponding author: P. Marjoram - pmarjora@usc.edu
+
+Postal addresses: H. Chen and P. Marjoram: Dept.\ of Preventive Medicine, Keck School of Medicine, USC,  Los Angeles, California 90089, USA. (HC: 071cht@gmail.com; PM: pmarjora@usc.edu)\\
+B.Foley: Molecular and Computational Biology, Dept. of Biological Sciences, USC, Los Angeles, California 90089, USA. (brfoley76@gmail.com)\\
+
+\begin{center}
+{\em [This paper is intended for IPCV'14.]}
+\end{center}
+
+
+
+\begin{abstract}
+Many methods for generating tracking data for animals such as \emph{Drosophila} assume idealized experimental conditions that are frequently difficult,  expensive, or undesirable to replicate in the lab. In this paper we propose methods for improving robustness to non-ideal conditions. Our method involves an initial processing step in which tracks are constructed from noisy video data, followed by a subsequent application of machine learning algorithms to further improve performance. We demonstrate that our methods are capable of generating a substantial improvement in performance in fly identification, and allow for effective construction of tracks for individual flies. Furthermore, the methods we develop here represent a key first step in any subsequent attempt to automatically recognize interactions between flies, such as courtship and acts of aggression. As such, our algorithm provides a path for groups who wish to track fly, or characterize their behavior, in less than ideal conditions. 
+ 
+ \vspace*{0.1in}
+ Keywords: tracking, machine learning, JAABA, behavior
+ 
+ \vspace*{0.1in}
+ 
+
+\end{abstract}
+
+\vspace*{-0.3in}
+\section*{Introduction}\label{s:intro}
+\vspace*{-0.15in}
+
+Behavioral studies commonly rely upon extensive time-series observation of animals, and characterization of their movement, activities and social interactions. Historically this involved scientists (or their students) recording observations by hand---a laborious and error-prone process. More recently, automation has promised to dramatically increase the quantity and detail of data collected, and a variety of methods have recently become popular in the important area of automated tracking, for example the CTRAX ethomics software \cite{ctrax}, and the proprietary Ethovision \cite{ethovision}. 
+
+Most available solutions demand restricted experimental conditions that may not be desirable for the question of interest, or feasible in the field, (or even the lab). For example, in \emph{Drosophila melanogaster} experiments, it is common to restrict the possibility of flight, and use a backlit glass substrate for contrast \cite{ctrax}. A majority of \emph{D. melanogaster} social interactions occur on food, and glass is not representative of their normal habitat. Additionally, many tracking algorithms perform poorly when the number of objects being tracked is not fixed. In such contexts it is difficult to determine whether a large ``blob'' of pixels in fact represents a single object or two overlapping objects. Such close contact happens commonly during aggression, courtship and mating events. 
+
+We are particularly interested in describing spontaneous group assembly. Here we consider data from a set of experiments in which we recorded fly behavior in an environment consisting of four food patches, modelled on a published experiment conducted with still cameras \cite{Saltz:2011}. Each patch was recorded independently, and flies could freely move among patches, or be off patch (and thus not recorded). To model group assembly, we need to accurately count individuals on patches, and measure joining and leaving. We are currently able to detect objects (blobs, or putative flies) in video frames against a static background. This method is designed to be relatively robust to non-optimal experimental conditions.
+
+Behavioral annotation requires that we move from static blobs, to individual-fly identification and tracking. We present a two-stage  process for this. First, we present an algorithm that enables us to assemble trajectories even through multi-fly blobs. We are then able to utilise these trajectories in freely available machine-learning behavioral annotation software. The Janelia Automatic Animal Behavior Annotator (JAABA) is a commonly used animal-behavior annotation software \cite{jaaba}. We use JAABA to manually flag errors in our tracking algorithm for ``single fly'' versus ``multi-fly'' blobs. This will enable trajectory correction and behavioural annotation.
+
+\vspace*{-0.15in}
+
+\section*{Methods}\label{s:methods}
+\vspace*{-0.15in}
+{\bf Initial Video Processing:}
+Videos are recorded using 4 high-resolution Grasshopper digital video cameras (Point Grey Research Inc., Richmond, Canada)  simultaneously filming individual patches at 30hz, RGB, and 800$\times$600 resolution. Videos are processed as single frames, by identifying blobs against an averaged background \cite{ArdekaniTavare:2013}. Blobs may contain from one to many individual flies, or be spurious artefacts. Features of the blobs are extracted using the cvBlobslib package  \cite{opencv}. The borders of the patch are defined manually, using the ImageJ software ellipse tool \cite{imagej}, and are calculated as length of the radius from centroid of the patch. All flies outside this radius are considered ``off patch''. Lighting was ambient room lighting. Videos were recorded for one hour intervals, and a subset were scored for joining and leaving by hand, to evaluate accuracy. 
+
+Blobs are identified for each frame, or time $T$. The number of blobs, and blob statistics for each $T$, were output. Blob statistics include the blob X and Y centroids ($B_X$ and $B_Y$); fitted-ellipse major and minor axes ($B_A$, $B_B$); and blob area (in pixels, $B_P$). Blobs with centroids outside the perimeter of the patch are excluded. Every blob is assigned a unique identifier within a frame ($B_i$). Each blob is subsequently assigned an inferred fly number ($B_n$, below).
+
+\vspace*{0.05in}
+\noindent{\bf Blobs and flies  -  Trajectory Assembly with Blob Uncertainty [TABU] :} Flies are taken to be nonfissible blob units. We infer the number and identity of flies within blobs by tracking fusion and fission events. We construct tracks by making three simplifying assumptions (based on observation). First, flies do not often move a greater distance than their body length between frames. Second, the noise in blob area estimation is not large between consecutive frames (\emph{i.e.,} less than half the actual fly area). Third, (on the scale of 30 frames a second) flies do not join and leave patches often---that is, we conservatively assume fly number does not change, unless there is no other explanation for the data. TABU is implemented in R \cite{R}.
+
+Trajectories are constructed by initializing the first frame assuming each blob is a single fly. Subsequently we implement the following algorithm at each frame:
+
+
+ \textbf{1. Identify Neighborhoods:} For each pair of frames $T_{t}$ and $T_{t+1}$, we construct a graph by drawing edges between blobs that: a) are in different frames; and b) overlap. We define overlapping as having centroids within the distance of the major axis $B_A$ of the blob ellipse. We define two degrees of overlapping: mutual and unidirectional. A mutual overlap occurs when the $B_A$ of both blobs is longer than the distance between their centroids. If only one $B_A$ is this long, the overlap is unidirectional. A ``neighborhood'' is defined as group of blobs linked by mutual edges.
+
+ \textbf{2. Check ``Joins" and ``Leaves":} We test for probable joining and leaving events by examining blobs that are not in a neighborhood with other blobs, using the more-relaxed unidirectional overlap. Flies in blobs in $T_{t}$ with no unidirectional matches in $T_{t+1}$ are assumed to have left, and flies in blobs in $T_{t+1}$ with no unidirectional matches in $T_{t}$ are assumed to have joined. Otherwise, the unmatched blobs are assigned to their nearest unidirectional match.
+
+ \textbf{3. Assign flies to blobs:} In the simplest case, a neighborhood is comprised of a single blob in $T_t$ and $T_{t+1}$. If so, all flies in the the blob at $T_t$ are assigned to the blob at $T_{t+1}$. In more complex cases we assign flies between blobs to minimize the difference between summed fly-area and their respective $B_P$. Every fly inherits the blob-specific statistics of its assigned blob. During fission events if there are fewer flies than blobs we update fly numbers. Thus, we arrive at our count of flies. Each blob is also assigned a count of the number of flies it contains, $B_N$.
+
+ \textbf{4. Update statistics:} Each fly is assigned a number of fly-specific statistics. These include a unique index for each fly ($F_j$); fly area in pixels ($F_P$); and fly area from the fitted ellipse ($F_e= {B_A B_B \pi}$). Statistics are running averages, updated only when a fly is inferred to be in a single-fly blob. An error parameter is also updated ($F_S$) to alert us when there is a mismatch between observed blob properties and the inferred fly state---for instance, if the ratio between $F_P$ and $F_e$ is much smaller than 0.9, there is a high likelihood the blob contains multiple flies. 
+
+ \textbf{5. Resolve probable errors:} For cases where error deviance $F_S$ has grown too large, we attempt to reduce mismatch between imputed fly and blob matches by imputing leaving events, or evaluating group assignment.
+
+
+\vspace*{0.05in}
+We have found that this method gives us correct fly counts in blobs \textgreater85\% of the time, but is subject to several systematic biases (see Results). For example it deals poorly with occlusion due to mounting which may last for seconds, and mating, which lasts for up to 20 minutes. It also may incorrectly infer several small flies instead of a single large fly. 
+%The final error correction stage occasionally introduces large jumps as flies are moved from one blob to another. 
+We therefore attempt a subsequent analysis aimed at correcting these remaining biases using ML.
+
+\vspace*{-0.15in}
+\subsection*{Machine Learning [ML] in JAABA and Trajectory Scoring}
+\vspace*{-0.12in}
+Once TABU has been applied, the trajectories become compatible with JAABA, allowing us to conveniently score behavior using its video annotation capabilities. 
+We then fit ML algorithms. One (GentleBoost) is implemented within JAABA. The others (GradientBoost, logistic regression, and Support Vector Machine [SVM] with linear and Gaussian kernels [GSVM and LSVM]) we implemented ourselves using the Python Scikit-learn \cite{scikit} package. For boosting we use decision stumps as the weak rules, and to ensure fair comparison default parameter values were used for all other methods. 
+
+
+\textbf{Training of ML Algorithms:} 
+We used JAABA to calculate a number of internal single-frame fly statistics, as well as multi-frame window features. Window features are normalized to have mean 0 and variance 1. It is these features that are used for the ML classifiers. Users define behaviors, and score positive and negative cases for trajectories in the JAABA GUI, by observation in the video window. By treating blob state, sex and chase as a ``behavior'' respectively, this allows us to train ML methods to model fly counts, sex, chase (and also to score the initial TABU blob calls). 
+
+Since the ML algorithms are binary classifiers, we first score instances of ``behavior'' as a binary outcome ``multifly'': multifly=1 for blobs labelled as having more than one fly; multifly=0 otherwise. We then fit ML classifiers using 3-fold cross-validation analysis in which the training data uses the manual annotations that we input using JAABA. After fitting, performance of each model is evaluated using accuracy, specificity, sensitivity, precision, and ``area under curve''. Here, ``accuracy'' is defined as the proportion of times flies are are correctly identified as being in a multifly blob or not, for a total number of validation calls. All other performance measures follow the usual statistical definitions. At the same time, we evaluate the performance of the TABU input trajectories by scoring whether our $B_N$ statistics accurately describe blob fly count. 
+%We report the model-accuracies that result from this analysis as well as those that result from application of the models to completely new video.
+
+Sex classification is performed after trajectory scoring. First, ....how did we get blob color..... Second, a sex classifier is trained and evaluated by 3-fold cross-validation analysis with same performance measures as above. Then the sex classifier's results from JAABA and sex marker information obtained from image processing are integrated which lead to the final assignment of sex. To do this, we assume homogeneous sex during each 'single' blob interval and only apply sex classifier on frames with uncertain sex marker. 
+
+The chase classifiers are trained and applied to frames with 'single' blob state afterwards.Taken together with blob state and sex classification, we created a behavior profile which includes the percentage of frames with multi blob state, female, aggression chasing (male fly chases male fly) and courtship chasing (male fly chases female fly) for each video.
+
+\vspace*{-0.15in}
+\section*{Results}\label{s:results}
+
+\vspace*{-0.15in}
+We begin by evaluating the performance of the basic blob-recognition algorithm from \cite{ArdekaniTavare:2013}, and the change in accuracy after processing the data with TABU, for the basic task of recognizing fly number and for joining and leaving events. The  empirical 'real' results are obtained from manual annotation. Results are shown in Table~\ref{BlobTabu}. Let $e$ be the estimated number of flies in a frame for a given method, $n$ be the actual (manually annotated) number, and $\tau$ be the total number of frames. We estimate overall counting error, $E$, as $E=\frac{1}{\tau}\sum \limits_\tau \frac{|e-n|}{n+1}$ (where the denominator is $n+1$ to avoid division by zero). This represents an approximate per-fly probability of being miscounted.  Directionality, $D$, is calculated similarly, $D=\frac{1}{\tau}\sum \limits_\tau \frac{e-n}{n+1}$, and demonstrates the chances of being consistently over- or under-counted. Joining or leaving events, 'Jump', are reported as the per-frame probability of either a change in blob number, or a trajectory starting or ending. Results are shown for three separate videos ('Rep').
+
+\begin{table}[ht]
+\vspace*{-0.15in}
+\centering
+\caption{Performance of the blob algorithm output (Blob), and TABU trajectory output. Counting error ($E$), and Directionality ($D$) bias in counting is shown. Empirical (Real) and estimated fly patch-joining or leaving rates (Jump) are also shown for raw blob data and proessed trajectories.} 
+\label{BlobTabu}
+\vspace{0.05in}
+\begin{tabular}{lccccccc}
+	\hline
+	Rep & Blob $E$ & TABU $E$ & Blob $D$ & TABU $D$ & Real Jump& Blob Jump & TABU Jump \\
+	\hline
+	1 & $0.121$ & $0.124$   & $-0.074$      & $0.100$      & $0.012$    &   $0.127$   & $0.047$ \\
+	2 & $0.143$ & $0.093$   & $-0.130$      & $0.080$      & $0.009$    & $0.115$ & $0.021$ \\
+	3 & $0.177$ & $0.106$   & $-0.150$     & $0.080$      & $0.013$    & $0.085$ & $0.037$ \\
+	
+	\hline
+\end{tabular}
+\end{table}
+
+By using TABU to create our trajectories, we have obtained more accurate, less biased, and less-noisy data (fewer spurious joining and leaving events) than the raw blob counts. Because of multi-fly blobs, the raw blob output tends to underestimate the true fly number when there is more than a single fly on a patch, while TABU has a slight bias towards over-counting. Even for the TABU output, there is a large excess of spurious joining and leaving events, offering potential for improvement through subsequent application of ML. The per-fly error rate (at least as reflected in per-fly count error) increases strongly for blob-counts (est=-0.06, df=107997, t=-206.3, P \textless 0.001). The change in error across fly number is much less pronounced (and the error rate approaches 0) in the TABU output (est=-0.007, df=107997, t=-22.2, P \textless 0.001) Figure~\ref{biasplot}.
+
+\begin{figure*}
+%\vspace*{-0.5in}
+\begin{center}
+\caption{Heat map of the distribution of per-fly over- and under-counts as function of the number of flies on a patch for each frame across 3 test videos.}
+\label{biasplot}
+\includegraphics[width=12cm]{bias.pdf}
+\vspace*{-0.15in}
+\end{center}
+\end{figure*}
+
+We now investigate whether application of ML methods to our TABU trajectories can identify miscalled blob counts $B_N$. Three-fold cross-validation model-fit results are shown in Table~\ref{PerformanceOnTrained}. Here algorithms were trained using a period of 10K frames. We see that all models have an accuracy above 0.98. The two SVM models rank highly on almost all metrics, while logistic regression ranks poorly on most metrics. While JAABA is not top ranked on any metric, we note that it performs very well overall.
+
+
+\begin{table}[ht]
+\centering
+\caption{Performance measures of ML algorithms on 3-fold cross validation. Ranks among ML methods for each performance score are given in brackets.} 
+\label{PerformanceOnTrained}
+\vspace{0.05in}
+\begin{tabular}{lccccc}
+	\hline
+	Algorithms & Accuracy & Specificity & Sensitivity & Precision & AUC \\
+	\hline
+	JAABA &$ 0.994 (2)$   & $0.994 (2)$      & $0.994 (3)$      & $0.994 (2)$    &    -    \\
+	GradientBoost      & $0.988 (5)$   & $0.987 (3)$      & $0.989 (5)$      & $0.987 (5)$    & $0.994 (4)$ \\
+	Logistic & $0.989 (4)$   & $0.984 (5)$     & $0.993 (4)$      & $0.985 (3)$    & $0.997 (3)$ \\
+	lSVM         & $0.991 (3)$   & $0.985 (4)$      & $0.996 (1)$     & $0.986 (4)$    & $0.998 (2)$ \\ 
+	gSVM        & $0.995 (1)$   & $0.995 (1)$      & $0.996 (2)$      & $0.995 (1)$    & $0.998 (1)$ \\ 
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+
+The critical practical question is whether models trained on one part of a video will be equally effective when applied to later periods of the same video, or to completely new video. Fly behavior is known to change over time, and varies among different genotypes and in different social contexts. 
+We tested the performance of all algorithms on 3 videos that were not used in the training of the algorithm. This included different genotypes and sex ratios, as well as slightly different lighting and focus, than the algorithms were trained on. Results are shown in Table~3. The performance of all ML methods dropped slightly under these new conditions. All the ML methods improved upon the trajectory input data from TABU. The performance ranking of the ML algorithms remained broadly the same in this new data. The gSVM did very well, and logistic regression did relatively poorly. Again JAABA (GentleBoost) did very well overall.
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation of ML algorithm performance on non-training videos. Minimum to maximum range of scores shown for each.} 
+\label{PerformanceOnIndependent}
+\begin{tabular}{lccc}
+	\hline
+	Algorithms  &  Accuracy  &  Specificity &  Sensitivity  \\ 
+	\hline
+	TABU  & $0.893-0.994$ & $0.797-0.995$ & $0.908-0.928$ \\
+	JAABA & $0.987-0.994$ & $0.988-0.996$ & $0.936-0.999$ \\
+	GradientBoost & $0.985-0.990$ & $0.967-0.990$ & $0.942-0.963$ \\
+	Logistic & $0.986-0.991$ & $0.972-0.996$ & $0.890-0.993$ \\
+	lSVM & $0.988-0.993$ & $0.977-0.995$ & $0.917-0.998$ \\
+	gSVM & $0.987-0.994$ & $0.980-0.997$ & $0.908-0.999$ \\
+	\hline
+\end{tabular}
+\vspace*{-0.15in}
+\end{table}
+
+\subsubsection*{Agreement of TABU with different learning algorithms over entire video}
+\vspace*{-0.15in}
+In order to better understand the sources of error, we investigated our trajectory data to find where TABU failed to identify transitions from either a single-fly blob to a multifly blob, or the reverse. Understanding when and why these errors occur will allow us to better finally correct our trajectories. In Figure~\ref{disagreement}, we show representative examples of sequences of consecutive frames in which TABU and JAABA have different predictions about blob state. In most cases both JAABA and TABU agree, even for jumps between states as short as a single frame.  %Table~\ref{PerformanceOnIndependent}
+
+\begin{figure*}[h]
+%\vspace*{-0.2in}
+\begin{center}
+\caption{Representative transitions from single-fly to multifly along trajectory fragments. The TABU predictions are shown in red, the true state is shown in black, and JAABA predictions in blue.}
+\label{disagreement}
+\includegraphics[width=12cm]{agree.pdf}
+\vspace*{-0.1in}
+\end{center}
+\end{figure*}
+
+
+From Figure~\ref{disagreement}, we can see that the wrong predictions of TABU mainly start from a state jump from multi to single fly, and last for indefinite length of frames depending on blob statistics (Figure~\ref{disagreement}, middle panel 6190-6220, bottom panel 17109-17282). In other less common cases, when two flies come in patch together and rarely separate, TABU is more likely to classify it as a single fly rather than multifly blob. (Figure~\ref{disagreement}, top panel)
+
+\subsubsection*{chasing classifier and behavior annotation }
+\vspace*{-0.15in}
+
+In order to further validate the quality of our trajectory data, we investigated the proportion of aggression chasing and courtship chasing in videos of different sex ratio.  
+
+
+
+\vspace*{-0.15in}
+\section*{Discussion}\label{s:discuss}
+\vspace*{-0.18in}
+
+In this paper we have developed a method for generating, and error correcting, tracking data from video recordings of {\em Drosophila} made in non-ideal  conditions. Non-optimal conditions cause problems at the initial image processing stage, due to poor performance of background subtraction routines, occlusion caused by proximity between animals, and uncertainty in the number of objects that need to be tracked (\emph{c.f.} \cite{ctrax}). This leads to subsequent poor performance of tracking data. However, imperfect conditions will  apply for a majority of behavioral observation systems in nature. Even in many lab situations, experimenters often have to work with such conditions to collect relevant data. Our methods offer the potential for investigators to more successfully work with such data.
+
+Our simple TABU tracking algorithm, by making a few realistic assumptions about the persistence of flies across frames and within blobs, greatly reduces the uncertainty of the initial image processing data from the algorithm of \cite{ArdekaniTavare:2013}. It allows us to count flies on patches with more certainty, and reduces the apparent degree of fly movement on and off of patches. Error rates are still non-zero, but it is clear that subsequent application of ML methods has the potential to increase correct allocation of flies among blobs from around 90\% to over 98\%. 
+
+Among the algorithms we evaluated, there is no clear winner among the ML methods in terms of performance. However, for ease of implementation, and robustly high performance, the GentleBoost algorithm natively implemented in JAABA represents a reasonable choice for future work. However, we note that use of JAABA requires fly tracking data as input, thereby necessitating pre-processing using an algorithm such as TABU before use. Such a pre-processing algorithm needs to be able to construct tracks successfully in non-ideal conditions, and when the number of objects being tracked is unknown, a problem that is known to be extremely challenging \cite{ctrax}.
+
+
+Our methods produce improved performance both in terms of accurate identification of the number of flies in a blob (and, therefore, the number of flies in a frame at any given moment), and in terms of generation of tracks for individual flies. Both of these types of information are crucial for analysis of fly (and other animal) group behavior. Flies are social animals, that actively aggregate and interact in groups. The sizes of these groups is therefore a key diagnostic of the behavior of those flies, and varies with factors such as  genotype, sex ratio, etc. Therefore, the methods we present here provide the opportunity for researchers to use automated methods to generate large quantities of such data in an experimental context. A more difficult remaining challenge is to automatically recognize interactions between flies, such as courtship and acts of aggression. Methods (including JAABA) are being developed to attack this problem. Creating, and error correcting, fly trajectories is a necessary first step in taking advantage of this work.
+
+\vspace{0.1in}
+\small{\noindent{\bf Acknowledgements:} The authors gratefully acknowledge funding from NSF and NIMH through awards  DMS 1101060 and MH100879. The material contained in this paper reflects the views of the authors, and not necessarily those of NSF or NMH.}
+
+\vspace*{-0.15in}
+\bibliography{MarjoramRefsMarch2014}
+
+
+\bibliographystyle{plain}
+
+\end{document}
